@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <!-- Include Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .dashboard {
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .chart-container {
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 10px;
+            box-shadow: 0px 0px 10px 2px #ccc;
+        }
+        .chart {
+            width: 100%;
+            height: 400px; /* Adjust the height to fit your layout */
+        }
+        .filters {
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0px 0px 10px 2px #ccc;
+        }
+        .chart-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="dashboard">
+            <h1 class="text-center">Data Visualization Dashboard</h1>
+
+            <div class="filters">
+                <h2 class="chart-title">Filters</h2>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="endYear">End Year:</label>
+                            <select class="form-control" id="endYear"></select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="topic">Topics:</label>
+                            <select class="form-control" id="topic"></select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="sector">Sector:</label>
+                            <select class="form-control" id="sector"></select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="region">Region:</label>
+                            <select class="form-control" id="region"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="pestle">PESTLE:</label>
+                            <select class="form-control" id="pestle"></select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="source">Source:</label>
+                            <select class="form-control" id="source"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Doughnut Chart (Intensity)</h2>
+                        <canvas id="doughnutChartIntensity" class="chart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Scatter Chart (Intensity vs. Likelihood)</h2>
+                        <canvas id="scatterChart" class="chart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- Additional Charts -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Line Chart (Year)</h2>
+                        <canvas id="lineChartYear" class="chart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Polar Area Chart (Relevance)</h2>
+                        <canvas id="polarAreaChartRelevance" class="chart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Radar Chart (Country)</h2>
+                        <canvas id="radarChartCountry" class="chart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <h2 class="chart-title">Bubble Chart (Country)</h2>
+                        <canvas id="bubbleChartCountry" class="chart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var doughnutChartIntensity;
+        var scatterChart;
+        var lineChartYear; // Updated chart variable name
+        var polarAreaChartRelevance;
+        var radarChartCountry; // Updated chart variable name
+        var bubbleChartCountry;
+
+        function populateDropdown(dropdown, options) {
+            dropdown.innerHTML = '<option value="">All</option>';
+            options.forEach(option => {
+                dropdown.innerHTML += `<option value="${option}">${option}</option>`;
+            });
+        }
+
+        function fetchFilterOptions() {
+            fetch(`http://127.0.0.1:5000/api/data`)
+                .then(response => response.json())
+                .then(data => {
+                    populateDropdown(document.getElementById('endYear'), data.filter_options.end_year);
+                    populateDropdown(document.getElementById('topic'), data.filter_options.topic);
+                    populateDropdown(document.getElementById('sector'), data.filter_options.sector);
+                    populateDropdown(document.getElementById('region'), data.filter_options.region);
+                    populateDropdown(document.getElementById('pestle'), data.filter_options.pestle);
+                    populateDropdown(document.getElementById('source'), data.filter_options.source);
+                });
+        }
+
+        function fetchData() {
+            const endYear = document.getElementById('endYear').value;
+            const topic = document.getElementById('topic').value;
+            const sector = document.getElementById('sector').value;
+            const region = document.getElementById('region').value;
+            const pestle = document.getElementById('pestle').value;
+            const source = document.getElementById('source').value;
+
+            fetch(`http://127.0.0.1:5000/api/data/filter?end_year=${endYear}&topic=${topic}&sector=${sector}&region=${region}&pestle=${pestle}&source=${source}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayData(data.data);
+                });
+        }
+
+        function displayData(data) {
+            if (doughnutChartIntensity) {
+                doughnutChartIntensity.destroy();
+            }
+            if (scatterChart) {
+                scatterChart.destroy();
+            }
+            if (lineChartYear) { // Updated chart variable name
+                lineChartYear.destroy(); // Updated chart variable name
+            }
+            if (polarAreaChartRelevance) {
+                polarAreaChartRelevance.destroy();
+            }
+            if (radarChartCountry) { // Updated chart variable name
+                radarChartCountry.destroy(); // Updated chart variable name
+            }
+            if (bubbleChartCountry) {
+                bubbleChartCountry.destroy();
+            }
+
+            const labels = data.map(item => item.insight);
+            const intensities = data.map(item => item.intensity);
+            const likelihoods = data.map(item => item.likelihood);
+            const relevances = data.map(item => item.relevance);
+            const years = data.map(item => item.year);
+            const countries = data.map(item => item.country);
+
+            // Doughnut Chart (Intensity)
+            const doughnutCtxIntensity = document.getElementById('doughnutChartIntensity').getContext('2d');
+            doughnutChartIntensity = new Chart(doughnutCtxIntensity, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: intensities,
+                        backgroundColor: ['rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6'],
+                        borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {}
+            });
+
+            // Scatter Chart (Intensity vs. Likelihood)
+            const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+            scatterChart = new Chart(scatterCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Intensity vs. Likelihood',
+                        data: data.map(item => ({ x: item.intensity, y: item.likelihood })),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom'
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            type: 'linear',
+                            position: 'left'
+                        }
+                    }
+                }
+            });
+
+            // Line Chart (Year) - Updated chart
+            const lineCtxYear = document.getElementById('lineChartYear').getContext('2d');
+            lineChartYear = new Chart(lineCtxYear, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Year',
+                        data: years,
+                        fill: false,
+                        borderColor: 'rgba(75, 192, 192, 1',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            maxRotation: 90,
+                            minRotation: 80
+                        }
+                    }
+                }
+            });
+
+            // Polar Area Chart (Relevance)
+            const polarAreaCtxRelevance = document.getElementById('polarAreaChartRelevance').getContext('2d');
+            polarAreaChartRelevance = new Chart(polarAreaCtxRelevance, {
+                type: 'polarArea',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: relevances,
+                        backgroundColor: ['rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 205, 86, 0.6'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {}
+            });
+
+            // Radar Chart (Country) - Updated chart
+            const radarCtxCountry = document.getElementById('radarChartCountry').getContext('2d');
+            radarChartCountry = new Chart(radarCtxCountry, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Country',
+                        data: countries,
+                        borderColor: 'rgba(54, 162, 235, 1',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            maxRotation: 90,
+                            minRotation: 80
+                        }
+                    }
+                }
+            });
+
+            // Bubble Chart (Country)
+            const bubbleCtxCountry = document.getElementById('bubbleChartCountry').getContext('2d');
+            bubbleChartCountry = new Chart(bubbleCtxCountry, {
+                type: 'bubble',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Country',
+                        data: data.map(item => ({
+                            x: item.country,
+                            y: item.relevance,
+                            r: 10
+                        })),
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                        borderColor: 'rgba(255, 99, 132, 1',
+                        borderWidth: 1
+                    }]
+                },
+                options: {}
+            });
+        }
+
+        fetchFilterOptions();
+        fetchData();
+
+        document.getElementById('endYear').addEventListener('change', fetchData);
+        document.getElementById('topic').addEventListener('change', fetchData);
+        document.getElementById('sector').addEventListener('change', fetchData);
+        document.getElementById('region').addEventListener('change', fetchData);
+        document.getElementById('pestle').addEventListener('change', fetchData);
+        document.getElementById('source').addEventListener('change', fetchData);
+    </script>
+</body>
+</html>
